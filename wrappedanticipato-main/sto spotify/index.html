@@ -21,12 +21,17 @@
         <svg viewBox="0 0 168 168" width="72" height="72" fill="none"><circle cx="84" cy="84" r="84" fill="#1DB954"/><path d="M50 62c26-8 50-6 70 6" stroke="#000" stroke-width="10" stroke-linecap="round"/><path d="M55 88c21-6 40-4 58 5" stroke="#000" stroke-width="8" stroke-linecap="round"/><path d="M60 112c16-4 30-3 44 4" stroke="#000" stroke-width="7" stroke-linecap="round"/></svg>
       </div>
       <h1>Il tuo Wrapped,<br/><span>in anticipo.</span></h1>
-      <p class="subtitle">Collega il tuo account Spotify e scopri subito artisti, brani e minuti ascoltati — senza aspettare dicembre.</p>
+      <p class="subtitle">Collega Spotify oppure importa la cronologia d'ascolto per scoprire i tuoi artisti e brani più ascoltati.</p>
       <button id="btn-login" class="btn-spotify">
         <svg viewBox="0 0 168 168" width="22" height="22" fill="none"><circle cx="84" cy="84" r="84" fill="#000"/><path d="M50 62c26-8 50-6 70 6" stroke="#fff" stroke-width="10" stroke-linecap="round"/><path d="M55 88c21-6 40-4 58 5" stroke="#fff" stroke-width="8" stroke-linecap="round"/><path d="M60 112c16-4 30-3 44 4" stroke="#fff" stroke-width="7" stroke-linecap="round"/></svg>
         Accedi con Spotify
       </button>
-      <p class="note">Utilizziamo solo permessi in lettura. I dati del profilo non vengono salvati dal sito.</p>
+      <div class="login-divider"><span>oppure senza login</span></div>
+      <label class="file-label" for="history-files">Importa la cronologia Spotify (file JSON)</label>
+      <input id="history-files" class="file-input" type="file" accept=".json,application/json" multiple />
+      <button id="btn-import" class="btn-ghost" type="button">Crea il riepilogo dall'archivio</button>
+      <p class="import-help">Scarica i tuoi dati da <a href="https://www.spotify.com/account/privacy/" target="_blank" rel="noopener">Privacy account Spotify</a>, estrai l'archivio ZIP e seleziona uno o più file JSON della cronologia audio. Il riepilogo usa gli ascolti degli ultimi 6 mesi. I file restano sul tuo dispositivo.</p>
+      <p class="note">Con il login usiamo solo permessi in lettura. I dati e i file importati non vengono salvati dal sito.</p>
       <p id="login-error" class="error hidden"></p>
     </div>
     <footer class="site-footer">Creato da <strong>Alessandro Basciano</strong> · <a href="mailto:alessandrobasciano1@gmail.com">alessandrobasciano1@gmail.com</a></footer>

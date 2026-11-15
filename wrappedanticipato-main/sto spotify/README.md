@@ -1,13 +1,38 @@
 # Spotify Wrapped Anticipato 🎧
 
-Sito statico che collega l'account Spotify dell'utente (OAuth 2.0 con PKCE) e mostra
-un "Wrapped" anticipato: minuti ascoltati, artista n.1, top 5 artisti, brano e top 5
-brani, generi preferiti e riepilogo finale — il tutto in slide in stile Wrapped.
+Sito statico che mostra un riepilogo dei tuoi ascolti Spotify. Puoi collegare
+l'account con OAuth 2.0 + PKCE oppure importare i file JSON della cronologia,
+senza login.
 
-Nessun backend necessario: tutto avviene nel browser. Il profilo non viene
-salvato dal sito; il Client ID e il token restano nella sessione del browser.
+Nessun backend necessario: i dati e i file importati vengono elaborati nel
+browser e non sono inviati o salvati dal sito.
+
+## Usare l'importazione (senza login)
+
+1. Vai su [Privacy account Spotify](https://www.spotify.com/account/privacy/) e
+   richiedi il download dei tuoi dati. Spotify include la cronologia streaming
+   dell'ultimo anno nei dati dell'account; puoi anche richiedere la cronologia
+   streaming estesa. Per i dettagli, consulta la guida Spotify
+   [Comprendere i tuoi dati](https://support.spotify.com/it/article/understanding-your-data/).
+2. Quando Spotify ti rende disponibile l'archivio, scaricalo ed estrai il file
+   ZIP.
+3. Nel sito seleziona uno o più file JSON della cronologia audio (spesso chiamati
+   `Streaming_History_Audio_...json`) e premi **Crea il riepilogo dall'archivio**.
+
+L'importazione usa gli ascolti musicali degli ultimi 6 mesi presenti nei file,
+calcola i minuti dai millisecondi riprodotti e ordina artisti e brani in base
+al tempo totale di ascolto. File, nomi e cronologia restano sul dispositivo:
+non vengono caricati su un server. Questa modalità non include immagini,
+generi o popolarità Spotify, perché questi dati non sono contenuti nella
+cronologia esportata.
 
 ## Configurazione Spotify
+
+Il login diretto richiede comunque la configurazione OAuth descritta qui sotto
+ed è soggetto alle regole di accesso Spotify. Per usare il sito senza essere
+nella allowlist, scegli l'importazione qui sopra. Spotify non restituisce i
+minuti realmente ascoltati tramite gli endpoint top tracks: il login diretto
+mostra artisti e brani ma non un conteggio dei minuti.
 
 1. Vai su [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
    e crea un'app.
@@ -19,10 +44,6 @@ salvato dal sito; il Client ID e il token restano nella sessione del browser.
 4. In **Development Mode**, aggiungi in **User Management** ogni account che
    deve poter usare l'app. Le regole attuali consentono fino a 5 utenti
    autorizzati; il proprietario dell'app deve avere Spotify Premium.
-
-Lo username Spotify non è un metodo di autenticazione e non permette di leggere
-minuti ascoltati, top artisti o top brani. Per creare il Wrapped serve che ogni
-utente colleghi il proprio account e autorizzi l'app tramite Spotify OAuth.
 
 Per consentire l'accesso senza allowlist servirebbe l'approvazione Spotify per
 **Extended Quota Mode**. Dal 15 maggio 2025 Spotify accetta richieste di accesso

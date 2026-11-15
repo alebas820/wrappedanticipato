@@ -76,6 +76,51 @@ body {
   font-size: .75rem;
   color: var(--muted);
 }
+.login-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 24px 0 16px;
+  color: var(--muted);
+  font-size: .75rem;
+}
+.login-divider::before, .login-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: rgba(255,255,255,.15);
+}
+.file-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: .85rem;
+  font-weight: 700;
+}
+.file-input {
+  display: block;
+  width: 100%;
+  margin-bottom: 12px;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: .75rem;
+}
+.file-input::file-selector-button {
+  margin-right: 8px;
+  padding: 8px 12px;
+  border: 1px solid rgba(255,255,255,.25);
+  border-radius: 8px;
+  background: #1c1c1e;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.import-help {
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: .72rem;
+  line-height: 1.5;
+}
+.import-help a { color: var(--green); }
 .error { margin-top: 16px; color: #ff5c5c; font-size: .85rem; }
 
 /* ---------- LOADING ---------- */
@@ -206,6 +251,18 @@ body {
   min-width: 30px;
 }
 .rank-list img { width: 54px; height: 54px; border-radius: 8px; object-fit: cover; }
+.rank-placeholder {
+  display: inline-flex;
+  width: 54px;
+  height: 54px;
+  flex: 0 0 54px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: rgba(29,185,84,.14);
+  color: var(--green);
+  font-size: 1.5rem;
+}
 .rank-list .info { flex: 1; min-width: 0; }
 .rank-list .name { font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rank-list .sub { color: var(--muted); font-size: .8rem; margin-top: 3px; }

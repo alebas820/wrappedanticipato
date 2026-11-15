@@ -130,7 +130,126 @@ async function fetchAllData() {
   const topList = [topArtistsShort, topArtistsMedium, topArtistsLong].find(l => l.items.length >= 5) || topArtistsLong;
   const artists = topList.items.slice(0, 5);
   const tracks = topTracksShort.items.length >= 10 ? topTracksShort.items : topTracksMedium.items;
-  return { profile, artists, tracks };
+  return { profile, artists, tracks, source: 'spotify' };
+}
+
+function firstValue(...values) {
+  return values.find(value => value !== undefined && value !== null && value !== '');
+}
+
+async function importSpotifyHistory(files) {
+  if (!files.length) throw new Error('Seleziona almeno un file JSON della cronologia audio.');
+
+  const cutoff = new Date();
+  cutoff.setMonth(cutoff.getMonth() - 6);
+  const artistTotals = new Map();
+  const trackTotals = new Map();
+  const albumIds = new Set();
+  let totalMsPlayed = 0;
+  let playCount = 0;
+
+  for (const file of files) {
+    let rows;
+    try {
+      rows = JSON.parse(await file.text());
+    } catch {
+      throw new Error('Il file "' + file.name + '" non è un JSON valido.');
+    }
+    if (!Array.isArray(rows)) {
+      throw new Error('Il file "' + file.name + '" non contiene una cronologia audio Spotify riconoscibile.');
+    }
+
+    for (const row of rows) {
+      if (!row || typeof row !== 'object') continue;
+
+      const trackName = firstValue(
+        row.master_metadata_track_name,
+        row.trackName,
+        row.track_name
+      );
+      const artistName = firstValue(
+        row.master_metadata_album_artist_name,
+        row.artistName,
+        row.artist_name
+      );
+      const albumName = firstValue(
+        row.master_metadata_album_album_name,
+        row.albumName,
+        row.album_name
+      ) || 'Album sconosciuto';
+      const playedAt = firstValue(row.ts, row.endTime, row.end_time, row.timestamp);
+      const playedMs = Number(firstValue(row.ms_played, row.msPlayed, row.MsPlayed));
+      const playedDate = playedAt ? new Date(playedAt) : null;
+
+      if (
+        !trackName ||
+        !artistName ||
+        row.episode_name ||
+        row.episodeName ||
+        !Number.isFinite(playedMs) ||
+        playedMs <= 0 ||
+        !playedDate ||
+        Number.isNaN(playedDate.getTime()) ||
+        playedDate < cutoff
+      ) continue;
+
+      const artistId = 'import-artist:' + artistName;
+      const albumId = artistName + '\u0000' + albumName;
+      const trackId = firstValue(row.spotify_track_uri, row.trackUri, row.track_uri) ||
+        artistName + '\u0000' + trackName;
+
+      let artist = artistTotals.get(artistId);
+      if (!artist) {
+        artist = { id: artistId, name: artistName, play_count: 0, total_ms_played: 0 };
+        artistTotals.set(artistId, artist);
+      }
+      artist.play_count += 1;
+      artist.total_ms_played += playedMs;
+
+      let track = trackTotals.get(trackId);
+      if (!track) {
+        track = {
+          id: trackId,
+          name: trackName,
+          artists: [{ id: artistId, name: artistName }],
+          album: { id: albumId, name: albumName, images: [] },
+          play_count: 0,
+          total_ms_played: 0,
+        };
+        trackTotals.set(trackId, track);
+      }
+      track.play_count += 1;
+      track.total_ms_played += playedMs;
+      albumIds.add(albumId);
+      totalMsPlayed += playedMs;
+      playCount += 1;
+    }
+  }
+
+  const artists = [...artistTotals.values()]
+    .sort((a, b) => b.total_ms_played - a.total_ms_played)
+    .slice(0, 5);
+  const tracks = [...trackTotals.values()]
+    .sort((a, b) => b.total_ms_played - a.total_ms_played)
+    .slice(0, 50);
+
+  if (!playCount || !artists.length || !tracks.length) {
+    throw new Error('Non trovo ascolti musicali negli ultimi 6 mesi. Seleziona i file JSON della cronologia audio più recente.');
+  }
+
+  return {
+    profile: { display_name: 'Ascoltatore', images: [] },
+    artists,
+    tracks,
+    minutes: Math.round(totalMsPlayed / 60000),
+    source: 'import',
+    listenerMetrics: {
+      playCount,
+      artistCount: artistTotals.size,
+      albumCount: albumIds.size,
+      mainArtistPlayCount: artists[0].play_count,
+    },
+  };
 }
 
 // ------------------------------------------------------------
@@ -138,29 +257,34 @@ async function fetchAllData() {
 // ------------------------------------------------------------
 const fmt = n => n.toLocaleString('it-IT');
 
-async function renderAll({ profile, artists, tracks }) {
-  // Hero
-  const minutes = Math.round(tracks.reduce((a, t) => a + (t.duration_ms || 0), 0) / 60000);
+async function renderAll(data) {
+  const { profile, artists, tracks } = data;
+  const minutes = Number.isFinite(data.minutes) ? data.minutes : null;
   document.getElementById('hero-name').textContent = profile.display_name || 'utente';
-  animateNumber('hero-minutes', minutes);
+  if (minutes === null) {
+    document.getElementById('hero-minutes').textContent = '—';
+  } else {
+    animateNumber('hero-minutes', minutes);
+  }
   document.querySelector('#slide-hero .kicker').textContent =
     'Ciao ' + (profile.display_name || 'utente') + ', ecco il tuo riepilogo';
+  document.querySelector('#slide-hero .big-label').innerHTML = data.source === 'import'
+    ? 'minuti ascoltati<br/>(cronologia degli ultimi 6 mesi)'
+    : 'Spotify non fornisce i minuti reali<br/>con il login diretto';
 
   // Slide artista #1
   const a1 = artists[0];
-  if (a1) {
-    document.getElementById('top-artist-img').src = a1.images?.[0]?.url || '';
-    document.getElementById('top-artist-name').textContent = a1.name;
-    document.getElementById('top-artist-followers').textContent =
-      'Il tuo artista più ascoltato';
-    document.getElementById('top-artist-genres').innerHTML =
-      (a1.genres || []).slice(0, 3).map(g => `<span>${g}</span>`).join('');
-  }
+  setImage('top-artist-img', a1?.images?.[0]?.url);
+  document.getElementById('top-artist-name').textContent = a1?.name || '—';
+  document.getElementById('top-artist-followers').textContent =
+    a1 ? 'Il tuo artista più ascoltato' : '';
+  document.getElementById('top-artist-genres').innerHTML =
+    (a1?.genres || []).slice(0, 3).map(g => `<span>${esc(g)}</span>`).join('');
 
   // Lista artisti
   document.getElementById('artist-list').innerHTML = artists.map((a, i) => `
     <li>
-      <img src="${a.images?.[2]?.url || a.images?.[0]?.url || ''}" alt="" />
+      ${rankImage(a.images?.[2]?.url || a.images?.[0]?.url)}
       <div class="info">
         <div class="name">${esc(a.name)}</div>
         <div class="sub">${i === 0 ? 'Il tuo preferito' : '#' + (i + 1) + ' nella tua classifica'}</div>
@@ -169,17 +293,16 @@ async function renderAll({ profile, artists, tracks }) {
 
   // Brano #1
   const s1 = tracks[0];
-  if (s1) {
-    document.getElementById('top-song-img').src = s1.album?.images?.[0]?.url || '';
-    document.getElementById('top-song-name').textContent = s1.name;
-    document.getElementById('top-song-artist').textContent =
-      s1.artists.map(a => a.name).join(', ') + ' · ' + (s1.album?.name || '');
-  }
+  setImage('top-song-img', s1?.album?.images?.[0]?.url);
+  document.getElementById('top-song-name').textContent = s1?.name || '—';
+  document.getElementById('top-song-artist').textContent = s1
+    ? s1.artists.map(a => a.name).join(', ') + ' · ' + (s1.album?.name || '')
+    : '';
 
   // Lista brani
   document.getElementById('song-list').innerHTML = tracks.slice(0, 5).map(t => `
     <li>
-      <img src="${t.album?.images?.[2]?.url || t.album?.images?.[0]?.url || ''}" alt="" />
+      ${rankImage(t.album?.images?.[2]?.url || t.album?.images?.[0]?.url)}
       <div class="info">
         <div class="name">${esc(t.name)}</div>
         <div class="sub">${esc(t.artists.map(a => a.name).join(', '))}</div>
@@ -187,12 +310,15 @@ async function renderAll({ profile, artists, tracks }) {
     </li>`).join('');
 
   // Tipo di ascoltatore (dalle abitudini di ascolto)
-  computeListenerType(artists, tracks);
+  computeListenerType(artists, tracks, data.listenerMetrics, data.source === 'import');
 
   // Riepilogo
   const monthNames = ['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre'];
+  const listeningTime = minutes === null
+    ? 'Spotify non fornisce i minuti di ascolto tramite il login diretto'
+    : `Negli ultimi 6 mesi hai ascoltato <b>${fmt(minutes)} minuti</b> di musica`;
   document.getElementById('summary-text').innerHTML =
-    `Nei tuoi ultimi mesi hai ascoltato <b>${fmt(minutes)} minuti</b> di musica, ` +
+    `${listeningTime}, ` +
     `con <b>${esc(a1?.name || '?')}</b> come artista del momento ` +
     `e <b>${esc(s1?.name || '?')}</b> in loop infinito. ` +
     `Musica, sopra ogni cosa. — ${monthNames[new Date().getMonth()]} ${new Date().getFullYear()}`;
@@ -200,9 +326,24 @@ async function renderAll({ profile, artists, tracks }) {
   // Profilo
   document.getElementById('user-name').textContent = profile.display_name || '';
   const img = profile.images?.[0]?.url;
-  const imgEl = document.getElementById('user-img');
-  imgEl.src = img || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg"/>';
-  if (!img) imgEl.style.display = 'none';
+  setImage('user-img', img);
+}
+
+function setImage(id, url) {
+  const element = document.getElementById(id);
+  if (url) {
+    element.src = url;
+    element.style.display = '';
+  } else {
+    element.removeAttribute('src');
+    element.style.display = 'none';
+  }
+}
+
+function rankImage(url) {
+  return url
+    ? `<img src="${url}" alt="" />`
+    : '<span class="rank-placeholder" aria-hidden="true">♫</span>';
 }
 
 function animateNumber(id, target) {
@@ -263,6 +404,31 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
+  document.getElementById('btn-import').addEventListener('click', async () => {
+    const error = document.getElementById('login-error');
+    const button = document.getElementById('btn-import');
+    const files = Array.from(document.getElementById('history-files').files || []);
+    error.textContent = '';
+    error.classList.add('hidden');
+    button.disabled = true;
+
+    try {
+      showScreen('loading');
+      document.getElementById('loading-text').textContent = 'Leggo la cronologia sul tuo dispositivo…';
+      const data = await importSpotifyHistory(files);
+      lastData = data;
+      await renderAll(data);
+      showScreen('results');
+      goTo(0);
+    } catch (err) {
+      console.error(err);
+      showScreen('login');
+      showLoginError('Impossibile creare il riepilogo: ' + err.message);
+    } finally {
+      button.disabled = false;
+    }
+  });
+
   document.getElementById('btn-next').addEventListener('click', () => goTo(current + 1));
   document.getElementById('btn-prev').addEventListener('click', () => goTo(current - 1));
   document.getElementById('dots').addEventListener('click', e => {
@@ -278,6 +444,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   // torna da Spotify con il codice?
   const code = new URLSearchParams(location.search).get('code');
   const oauthError = new URLSearchParams(location.search).get('error');
+  let msgTimer;
   try {
     if (oauthError) {
       const messages = {
@@ -302,7 +469,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     // messaggi di caricamento animati
     const msgs = ['Carico i tuoi artisti…', 'Conto i minuti…', 'Sfoglio i generi…', 'Quasi finito…'];
     let mi = 0;
-    const msgTimer = setInterval(() => {
+    msgTimer = setInterval(() => {
       document.getElementById('loading-text').textContent = msgs[mi++ % msgs.length];
     }, 700);
 
@@ -314,6 +481,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     showScreen('results');
     goTo(0);
   } catch (err) {
+    clearInterval(msgTimer);
     console.error(err);
     showScreen('login');
     showLoginError('Errore: ' + err.message);
@@ -338,7 +506,7 @@ async function loadImage(url) {
 async function downloadSummaryImage() {
   if (!lastData) return;
   const { profile, artists, tracks } = lastData;
-  const minutes = Math.round(tracks.reduce((a, t) => a + (t.duration_ms || 0), 0) / 60000);
+  const minutes = Number.isFinite(lastData.minutes) ? fmt(lastData.minutes) : '—';
   const topArtist = artists[0];
   const topSong = tracks[0];
 
@@ -369,10 +537,10 @@ async function downloadSummaryImage() {
   // minuti
   ctx.fillStyle = '#1DB954';
   ctx.font = '900 130px Montserrat, sans-serif';
-  ctx.fillText(fmt(minutes), W / 2, 350);
+  ctx.fillText(minutes, W / 2, 350);
   ctx.fillStyle = 'rgba(255,255,255,.75)';
   ctx.font = '600 36px Montserrat, sans-serif';
-  ctx.fillText('minuti ascoltati', W / 2, 405);
+  ctx.fillText(Number.isFinite(lastData.minutes) ? 'minuti ascoltati' : 'minuti non disponibili da Spotify', W / 2, 405);
 
   // copertine artista e brano
   const pad = 90, cardW = 400, cardH = 400, gap = 60;
@@ -461,12 +629,13 @@ function truncate(s, n) {
 // ------------------------------------------------------------
 // Tipo di ascoltatore (basato su dati reali di ascolto)
 // ------------------------------------------------------------
-function computeListenerType(artists, tracks) {
-  // metriche dai dati reali
-  const totalPlays = tracks.length || 1;
-  const uniqArtists = new Set(tracks.flatMap(t => t.artists.map(a => a.id))).size;
-  const uniqAlbums = new Set(tracks.map(t => t.album?.id)).size;
-  const mainArtistPlays = tracks.filter(t => t.artists.some(a => a.id === artists[0]?.id)).length;
+function computeListenerType(artists, tracks, metrics, imported) {
+  const totalPlays = metrics?.playCount || tracks.reduce((sum, track) => sum + (track.play_count || 1), 0) || 1;
+  const uniqArtists = metrics?.artistCount || new Set(tracks.flatMap(t => t.artists.map(a => a.id))).size;
+  const uniqAlbums = metrics?.albumCount ?? new Set(tracks.map(t => t.album?.id)).size;
+  const mainArtistPlays = metrics?.mainArtistPlayCount ??
+    tracks.filter(t => t.artists.some(a => a.id === artists[0]?.id))
+      .reduce((sum, track) => sum + (track.play_count || 1), 0);
   const loyalty = mainArtistPlays / totalPlays;         // quanto ascolti sempre lo stesso artista
   const variety = uniqArtists / totalPlays;             // quanto vari nel gusto
   const repeatRate = 1 - (uniqAlbums / totalPlays);     // quanto riascolti gli stessi album
@@ -490,11 +659,11 @@ function computeListenerType(artists, tracks) {
     emoji = '🌍';
     title = 'Esploratore infaticabile';
     desc = `Hai suonato <b>${uniqArtists} artisti diversi</b> in ${totalPlays} ascolti. Sei quello/a che scopre il brano prima che diventi famoso — e lo ricorda a tutti.`;
-  } else if (avgPop < 45) {
+  } else if (!imported && avgPop < 45) {
     emoji = '🕵️';
     title = 'Cacciatore di gemme nascoste';
     desc = `I tuoi artisti hanno una popolarità media di soli <b>${Math.round(avgPop)}/100</b>. Mentre gli altri seguono le classifiche, tu scavi dove nessun altro guarda.`;
-  } else if (avgPop >= 78) {
+  } else if (!imported && avgPop >= 78) {
     emoji = '📈';
     title = 'Affidabile al servizio tendenze';
     desc = `Popolarità media <b>${Math.round(avgPop)}/100</b>: ascolti chi domina le classifiche. Zero ansia da FOMO — quando tutti parlano di qualcosa, tu lo conosci già.`;
