@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spotify Wrapped Anticipato</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ============ SCHERMATA LOGIN ============ -->
+  <section id="screen-login" class="screen active">
+    <div class="login-card">
+      <div class="logo">
+        <svg viewBox="0 0 168 168" width="72" height="72" fill="none"><circle cx="84" cy="84" r="84" fill="#1DB954"/><path d="M50 62c26-8 50-6 70 6" stroke="#000" stroke-width="10" stroke-linecap="round"/><path d="M55 88c21-6 40-4 58 5" stroke="#000" stroke-width="8" stroke-linecap="round"/><path d="M60 112c16-4 30-3 44 4" stroke="#000" stroke-width="7" stroke-linecap="round"/></svg>
+      </div>
+      <h1>Il tuo Wrapped,<br/><span>in anticipo.</span></h1>
+      <p class="subtitle">Collega il tuo account Spotify e scopri subito artisti, brani e minuti ascoltati — senza aspettare dicembre.</p>
+      <button id="btn-login" class="btn-spotify">
+        <svg viewBox="0 0 168 168" width="22" height="22" fill="none"><circle cx="84" cy="84" r="84" fill="#000"/><path d="M50 62c26-8 50-6 70 6" stroke="#fff" stroke-width="10" stroke-linecap="round"/><path d="M55 88c21-6 40-4 58 5" stroke="#fff" stroke-width="8" stroke-linecap="round"/><path d="M60 112c16-4 30-3 44 4" stroke="#fff" stroke-width="7" stroke-linecap="round"/></svg>
+        Accedi con Spotify
+      </button>
+      <p class="note">Utilizziamo solo permessi in lettura. I tuoi dati non vengono salvati da nessuna parte.</p>
+      <p id="login-error" class="error hidden"></p>
+    </div>
+    <footer class="site-footer">Creato da <strong>Alessandro Basciano</strong> · <a href="mailto:alessandrobasciano1@gmail.com">alessandrobasciano1@gmail.com</a></footer>
+  </section>
+
+  <!-- ============ SCHERMATA CARICAMENTO ============ -->
+  <section id="screen-loading" class="screen">
+    <div class="loader">
+      <div class="spinner"></div>
+      <p id="loading-text">Sto analizzando il tuo profilo…</p>
+    </div>
+  </section>
+
+  <!-- ============ SCHERMATA RISULTATI ============ -->
+  <section id="screen-results" class="screen">
+    <header class="top-bar">
+      <span class="brand">Wrapped<em>Anticipato</em></span>
+      <div class="profile">
+        <span id="user-name"></span>
+        <img id="user-img" alt="" />
+      </div>
+    </header>
+
+    <div class="slides" id="slides">
+
+      <!-- Slide 1: Hero -->
+      <article class="slide slide-hero" id="slide-hero">
+        <p class="kicker">Ciao</p>
+        <h2 id="hero-name">—</h2>
+        <p class="big-num" id="hero-minutes">0</p>
+        <p class="big-label">minuti ascoltati<br/>(ultimi ~6 mesi)</p>
+      </article>
+
+      <!-- Slide 2: Top Artist -->
+      <article class="slide slide-artist" id="slide-artist">
+        <p class="kicker">Il tuo artista n.1</p>
+        <img id="top-artist-img" alt="" />
+        <h2 id="top-artist-name">—</h2>
+        <p class="stat" id="top-artist-followers">—</p>
+        <div id="top-artist-genres" class="genres"></div>
+      </article>
+
+      <!-- Slide 3: Top Artisti 2-5 -->
+      <article class="slide">
+        <p class="kicker">I tuoi top 5 artisti</p>
+        <ol class="rank-list" id="artist-list"></ol>
+      </article>
+
+      <!-- Slide 4: Top Song -->
+      <article class="slide slide-song" id="slide-song">
+        <p class="kicker">La canzone dell'anno</p>
+        <img id="top-song-img" alt="" />
+        <h2 id="top-song-name">—</h2>
+        <p class="stat" id="top-song-artist">—</p>
+      </article>
+
+      <!-- Slide 5: Top 5 brani -->
+      <article class="slide">
+        <p class="kicker">I tuoi top 5 brani</p>
+        <ol class="rank-list" id="song-list"></ol>
+      </article>
+
+      <!-- Slide 6: Tipo di ascoltatore -->
+      <article class="slide slide-listener">
+        <p class="kicker">Sei un…</p>
+        <div id="listener-emoji" class="listener-emoji">🎧</div>
+        <h2 id="listener-title">—</h2>
+        <p id="listener-desc" class="listener-desc">—</p>
+      </article>
+
+      <!-- Slide 7: Conclusione -->
+      <article class="slide slide-hero" id="slide-end">
+        <p class="kicker">Riepilogo</p>
+        <p class="summary" id="summary-text">—</p>
+        <button id="btn-download" class="btn-spotify">Scarica l'immagine del riepilogo</button>
+        <button id="btn-replay" class="btn-ghost">Esci</button>
+      </article>
+    </div>
+
+    <nav class="slide-nav">
+      <button id="btn-prev" aria-label="Precedente">‹</button>
+      <div class="dots" id="dots"></div>
+      <button id="btn-next" aria-label="Successivo">›</button>
+    </nav>
+    <footer class="site-footer">Creato da <strong>Alessandro Basciano</strong> · <a href="mailto:alessandrobasciano1@gmail.com">alessandrobasciano1@gmail.com</a></footer>
+  </section>
+
+  <script src="app.js"></script>
+</body>
+</html>
